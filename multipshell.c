@@ -52,8 +52,7 @@ int main(int argc, char **argv){
 			}
 		}
 	} else if (argc == 2){
-		//isEnd = batchMode(argv[1]);
-		isEnd = 0;
+		isEnd = batchMode(argv[1]);
 		if(isEnd)
 			return 0;
 	} else {
@@ -71,15 +70,10 @@ int get_token(char *cmd){
 
 	while(t.token1){
 		t.divideToken[cCnt++] = t.token1;
-		t.token1 = strtok(NULL, delim1);
-			
+		t.token1 = strtok(NULL, delim1);			
 	}
+	
 	t.divideToken[cCnt++] = NULL;
-
-	if(cCnt == 1){
-		printf("No commands\n");
-		exit(1);
-	}
 
 	while(i < cCnt) {
 		t.token2 = strtok(t.divideToken[i], delim2);
@@ -92,11 +86,12 @@ int get_token(char *cmd){
 	}
 
 	for(i=0; i < cCnt - 1; i++){
-		if((strcmp(t.afterToken[i][0] ,"quit") ==0 )){
-			exitCheck = 1;
-		}
+	  if(strcmp(t.afterToken[i][0], "quit") == 0){
+	    exitCheck = 1;
+	  }
+//	  printf("\n%s\n", t.afterToken[i][0]);
 	}
-
+	
 	return cCnt;
 }
 
@@ -122,15 +117,17 @@ int interactiveMode(){
 	fputs("prompt> ", stdout);
 	fgets(cmdStr, STR_LEN, stdin);	
 	
+	if((int)strlen(cmdStr) == 1){
+	  return exitCode;
+	}
 	tokenInit();
-	cmdNumber = get_token(cmdStr);
+  cmdNumber = get_token(cmdStr);
 
 	i = 0;
 
 	
 // 명령어를 실행하는 핵심코드
-	while(i < cmdNumber) {
-		
+	while(i < cmdNumber) {	
 		pid = fork();
 		if(pid == 0) {
 			execvp(t.afterToken[i][0], t.afterToken[i]);
@@ -151,7 +148,7 @@ int interactiveMode(){
 
 	return exitCode;	
 }
-/*
-int batchMode(char **filepath){
+
+int batchMode(char *filepath){
 	printf("HelloWorld From batchMode\n");
-}*/
+}
