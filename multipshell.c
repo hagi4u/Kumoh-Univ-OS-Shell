@@ -4,13 +4,14 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <errno.h>
 
 #define STR_LEN 32
 #define MAX_TOKENS 32
 #define MAX_SIZE 1024
 
 int exitCode = 0;		// Call by quit (Default = 0)
-int cmdNumber;
+int cmdCnt;
 char delim1[] = "|";
 char delim2[] = " \n";
 
@@ -18,7 +19,6 @@ char cmdStr[STR_LEN];
 char exitCheck = 0;
 char *cmdTokenList[MAX_TOKENS];
 
-int pdes[2];
 int interactiveMode();
 int batchMode(char * filepath);
 int get_token(char * cmd);
@@ -38,11 +38,7 @@ void die(const char *msg){
 
 int main(int argc, char **argv){
 	int isEnd;
-	
-  if(pipe(pdes)){
-    die("pipe()");
-  };
-	
+  
 	if(argc == 1){ // interactiveMode
 		while(1){
 			isEnd = interactiveMode();
@@ -86,10 +82,11 @@ int get_token(char *cmd){
 	}
 
 	for(i=0; i < cCnt - 1; i++){
-	  if(strcmp(t.afterToken[i][0], "quit") == 0){
-	    exitCheck = 1;
-	  }
-//	  printf("\n%s\n", t.afterToken[i][0]);
+		if(strcmp(t.afterToken[i][0], "quit") == 0){
+			return 0;
+		} else {
+			continue;
+		}
 	}
 	
 	return cCnt;
@@ -106,14 +103,54 @@ void tokenInit(){
 			t.afterToken[i][j] = NULL;
 }
 
+int cmdProc(int cnt){
+	int i=0, status = 0;
+	int pdes[2];
+	pid_t pid;
+/*
+  cnt - 1 = 1 이면 Pipe X
+  i == cnt - 1 이면 output Pipe x 
+*/
+	if(pipe(pdes)){
+                die("pipe()");
+                exit(0);
+        };
+
+	while(i < (cnt - 1)) {
+		pid = fork();
+		if(pid < 0)
+			die("fork()!!");
+    
+		if(pid == 0) { // isChild
+			if( i == 0 ){
+				if((cnt-1) != 1){
+					close(pdes[0]);
+					if(dup2(pdes[1], 1) == -1)
+						die("dup2()");
+					close(pdes[1]);
+				}
+			}
+			if(i == 1){
+				close(pdes[1]);
+				if(dup2(pdes[0],0) == -1)
+                                	die("dup2()");
+                        	close(pdes[0]);
+			}
+			execvp(t.afterToken[i][0], t.afterToken[i]);
+			_exit(1);
+			return 0;
+		}
+		i++; 
+  	}
+	wait(&status);
+	usleep( 5000 );
+	return 0;
+}
+
 int interactiveMode(){
 	char cmdStr[STR_LEN];
 	int exitCode = 0;
-	int status = 0;
-	int i = 0;
-
-	pid_t pid;
-
+	
 	fputs("prompt> ", stdout);
 	fgets(cmdStr, STR_LEN, stdin);	
 	
@@ -121,30 +158,12 @@ int interactiveMode(){
 	  return exitCode;
 	}
 	tokenInit();
-  cmdNumber = get_token(cmdStr);
-
-	i = 0;
-
-	
-// 명령어를 실행하는 핵심코드
-	while(i < cmdNumber) {	
-		pid = fork();
-		if(pid == 0) {
-			execvp(t.afterToken[i][0], t.afterToken[i]);
-			exit(1);
-			return 0;
-		}
-		i++;
-	}
-
-	i = 0;
-// wait 함수.
-	while(i < cmdNumber) {
-		wait(&status);
-		i++;
-	}
-	if(exitCheck == 1)
-		exitCode = 1;
+  
+  	if(!(cmdCnt = get_token(cmdStr))){
+  	 	exitCode = 1;
+		return exitCode;
+ 	 }
+  	cmdProc(cmdCnt);
 
 	return exitCode;	
 }
