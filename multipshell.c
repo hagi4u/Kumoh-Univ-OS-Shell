@@ -61,11 +61,8 @@ int get_token(char *cmd){
 	int cCnt = 0;
 	int tNum = 0;
 	int i = 0;
-	
+
 	t.token1 = strtok(cmd, delim1);
-	if(t.token1 == NULL){
-		return 0;
-	}
 
 	while(t.token1){
 		t.divideToken[cCnt++] = t.token1;
