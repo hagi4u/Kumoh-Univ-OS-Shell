@@ -61,8 +61,9 @@ int get_token(char *cmd){
 	int cCnt = 0;
 	int tNum = 0;
 	int i = 0;
-
-	if(t.token1){
+	
+	t.token1 = strtok(cmd, delim1);
+	if(t.token1 == NULL){
 		return 0;
 	}
 
@@ -84,7 +85,6 @@ int get_token(char *cmd){
 	}
 
 	for(i=0; i < cCnt - 1; i++){
-		printf(" CMD : %s\n", t.afterToken[i][0]);
 		if(!strcmp(t.afterToken[i][0], "quit")){
 			return 0;
 		} 
@@ -116,7 +116,7 @@ int cmdProc(int cnt){
                 die("pipe()");
                 exit(0);
         };
-
+	
 	while(i < (cnt - 1)) {
 		pid = fork();
 		if(pid < 0)
@@ -159,7 +159,6 @@ int interactiveMode(){
 	  return exitCode;
 	}
 	tokenInit();
-  
   	if(!(cmdCnt = get_token(cmdStr))){
   	 	exitCode = 1;
 		return exitCode;
