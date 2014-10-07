@@ -5,6 +5,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <errno.h>
+#include <signal.h>
 
 #define STR_LEN 32
 #define MAX_TOKENS 32
@@ -38,7 +39,6 @@ void die(const char *msg){
 
 int main(int argc, char **argv){
 	int isEnd;
-  
 	if(argc == 1){ // interactiveMode
 		while(1){
 			isEnd = interactiveMode();
@@ -62,7 +62,9 @@ int get_token(char *cmd){
 	int tNum = 0;
 	int i = 0;
 
-	t.token1 = strtok(cmd, delim1);
+	if(t.token1){
+		return 0;
+	}
 
 	while(t.token1){
 		t.divideToken[cCnt++] = t.token1;
@@ -82,11 +84,10 @@ int get_token(char *cmd){
 	}
 
 	for(i=0; i < cCnt - 1; i++){
-		if(strcmp(t.afterToken[i][0], "quit") == 0){
+		printf(" CMD : %s\n", t.afterToken[i][0]);
+		if(!strcmp(t.afterToken[i][0], "quit")){
 			return 0;
-		} else {
-			continue;
-		}
+		} 
 	}
 	
 	return cCnt;
@@ -143,7 +144,7 @@ int cmdProc(int cnt){
 		i++; 
   	}
 	wait(&status);
-	usleep( 5000 );
+	usleep( 7000 );
 	return 0;
 }
 
@@ -169,5 +170,29 @@ int interactiveMode(){
 }
 
 int batchMode(char *filepath){
-	printf("HelloWorld From batchMode\n");
+	char cmdStr[STR_LEN];
+	FILE *fp;
+	int cmdCnt = 0;
+	int i = 0;
+
+	fp = fopen(filepath, "r");
+	if(fp == NULL) {
+		printf("파일이 존재하지 않습니다.\n");
+		exit(1);;
+	}
+	
+	while(1){
+		if(fgets(cmdStr, sizeof(cmdStr), fp) == NULL){
+			break;
+		}
+		printf("%d %s", i+1, cmdStr);
+		if(!(cmdCnt = get_token(cmdStr))) {
+			exitCode = 1;
+			return exitCode;
+		};
+		cmdProc(cmdCnt);
+		i++;
+	}
+
+	fclose(fp);
 }
